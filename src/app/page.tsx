@@ -107,6 +107,29 @@ export default function Home() {
     return () => window.removeEventListener("keydown", handleKey);
   }, [prevPage, nextPage, isEditing]);
 
+  // ─── Touch swipe navigation ──────────────────────────────────────────────
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  }, []);
+
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      if (isEditing) return;
+      const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+      const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+      // Only trigger if horizontal swipe is dominant and exceeds threshold
+      if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+        if (deltaX < 0) nextPage();
+        else prevPage();
+      }
+    },
+    [isEditing, nextPage, prevPage]
+  );
+
   // ─── Page mutations ──────────────────────────────────────────────────────
   const debouncedSave = useCallback(
     (newPages: PageData[]) => {
@@ -176,7 +199,11 @@ export default function Home() {
   const totalTextPages = pages.filter((p) => p.type === "text").length;
 
   return (
-    <div className="h-screen w-screen overflow-hidden flex flex-col bg-surface-container-low text-on-surface select-none">
+    <div
+      className="h-screen w-screen overflow-hidden flex flex-col bg-surface-container-low text-on-surface select-none"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* ─── Header ─────────────────────────────────────────────────────── */}
       <header className="bg-surface relative z-50 shrink-0 border-b border-black/5">
         <div className="flex justify-between items-center px-4 sm:px-6 md:px-12 py-2 sm:py-3 max-w-full mx-auto">
@@ -340,41 +367,41 @@ export default function Home() {
       </main>
 
       {/* ─── Bottom Navigation ──────────────────────────────────────────── */}
-      <footer className="h-12 sm:h-16 shrink-0 bg-surface border-t border-black/5 flex items-center justify-between px-3 sm:px-4 md:px-16">
+      <footer className="h-14 sm:h-16 shrink-0 bg-surface border-t border-black/5 flex items-center justify-between px-2 sm:px-4 md:px-16">
         <button
           onClick={prevPage}
           disabled={currentIndex === 0}
-          className={`flex items-center gap-1 sm:gap-2 font-['Newsreader'] uppercase tracking-[0.15em] sm:tracking-[0.2em] text-[10px] sm:text-xs transition-all min-h-[44px] min-w-[44px] justify-center ${
+          className={`flex items-center gap-1.5 font-['Newsreader'] uppercase tracking-[0.15em] sm:tracking-[0.2em] text-xs sm:text-xs transition-all min-h-[48px] px-4 sm:px-5 rounded-md ${
             currentIndex === 0
-              ? "opacity-15 cursor-not-allowed"
-              : "opacity-60 hover:opacity-100 hover:-translate-x-1"
+              ? "opacity-20 cursor-not-allowed"
+              : "opacity-80 hover:opacity-100 active:bg-black/5 hover:-translate-x-1"
           }`}
         >
-          <span className="material-symbols-outlined text-base">arrow_back_ios</span>
-          <span className="hidden sm:inline">Previous</span>
+          <span className="material-symbols-outlined text-lg">arrow_back_ios</span>
+          <span>Prev</span>
         </button>
 
-        <div className="flex items-center gap-3 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           {currentPage.type === "text" && (
             <>
               <button
                 onClick={addPage}
-                className="tooltip-wrapper flex items-center gap-1 text-xs opacity-30 hover:opacity-80 transition-opacity font-['Newsreader'] uppercase tracking-[0.1em] min-h-[44px] min-w-[44px] justify-center"
-                data-tooltip="Insert page after"
+                className="flex items-center justify-center opacity-40 active:opacity-80 hover:opacity-80 transition-opacity min-h-[48px] min-w-[48px] rounded-md active:bg-black/5"
+                aria-label="Add page"
               >
-                <span className="material-symbols-outlined text-base">add</span>
+                <span className="material-symbols-outlined text-xl">add</span>
               </button>
               <button
                 onClick={deletePage}
                 disabled={totalTextPages <= 1}
-                className={`tooltip-wrapper flex items-center gap-1 text-xs transition-opacity font-['Newsreader'] uppercase tracking-[0.1em] min-h-[44px] min-w-[44px] justify-center ${
+                className={`flex items-center justify-center transition-opacity min-h-[48px] min-w-[48px] rounded-md active:bg-black/5 ${
                   totalTextPages <= 1
                     ? "opacity-10 cursor-not-allowed"
-                    : "opacity-30 hover:opacity-80"
+                    : "opacity-40 active:opacity-80 hover:opacity-80"
                 }`}
-                data-tooltip="Delete this page"
+                aria-label="Delete page"
               >
-                <span className="material-symbols-outlined text-base">delete</span>
+                <span className="material-symbols-outlined text-xl">delete</span>
               </button>
             </>
           )}
@@ -383,14 +410,14 @@ export default function Home() {
         <button
           onClick={nextPage}
           disabled={currentIndex === pages.length - 1}
-          className={`flex items-center gap-1 sm:gap-2 font-['Newsreader'] uppercase tracking-[0.15em] sm:tracking-[0.2em] text-[10px] sm:text-xs transition-all min-h-[44px] min-w-[44px] justify-center ${
+          className={`flex items-center gap-1.5 font-['Newsreader'] uppercase tracking-[0.15em] sm:tracking-[0.2em] text-xs sm:text-xs transition-all min-h-[48px] px-4 sm:px-5 rounded-md ${
             currentIndex === pages.length - 1
-              ? "opacity-15 cursor-not-allowed"
-              : "opacity-60 hover:opacity-100 hover:translate-x-1"
+              ? "opacity-20 cursor-not-allowed"
+              : "opacity-80 hover:opacity-100 active:bg-black/5 hover:translate-x-1"
           }`}
         >
-          <span className="hidden sm:inline">Next</span>
-          <span className="material-symbols-outlined text-base">arrow_forward_ios</span>
+          <span>Next</span>
+          <span className="material-symbols-outlined text-lg">arrow_forward_ios</span>
         </button>
       </footer>
     </div>
