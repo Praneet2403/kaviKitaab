@@ -1,65 +1,398 @@
-import Image from "next/image";
+"use client";
 
+import { useState, useEffect, useCallback, useRef } from "react";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+type PageData =
+  | { type: "cover" }
+  | { type: "text"; content: string; title: string }
+  | { type: "back_cover" };
+
+const POLL_INTERVAL = 3000; // poll server every 3 seconds for live updates
+
+// ─── API helpers ─────────────────────────────────────────────────────────────
+async function fetchPages(): Promise<PageData[]> {
+  const res = await fetch("/api/pages", { cache: "no-store" });
+  const data = await res.json();
+  return data.pages;
+}
+
+async function savePagesToDB(pages: PageData[]): Promise<boolean> {
+  try {
+    const res = await fetch("/api/pages", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pages }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+// ─── Main Component ──────────────────────────────────────────────────────────
 export default function Home() {
+  const [pages, setPages] = useState<PageData[] | null>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [animClass, setAnimClass] = useState("page-enter");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [isEditing, setIsEditing] = useState(false);
+  const [liveIndicator, setLiveIndicator] = useState(true);
+
+  const animTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const localVersionRef = useRef(0); // tracks local edits to avoid overwrite during typing
+  const serverVersionRef = useRef(0);
+
+  // ─── Initial load ────────────────────────────────────────────────────────
+  useEffect(() => {
+    fetchPages().then((p) => {
+      setPages(p);
+      serverVersionRef.current = Date.now();
+    });
+  }, []);
+
+  // ─── Live polling for updates from server ────────────────────────────────
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      // Don't overwrite while user is actively typing
+      if (isEditing) return;
+
+      try {
+        const serverPages = await fetchPages();
+        // Only update if we haven't made local edits recently
+        if (localVersionRef.current <= serverVersionRef.current) {
+          setPages(serverPages);
+          setLiveIndicator(true);
+        }
+        serverVersionRef.current = Date.now();
+      } catch {
+        setLiveIndicator(false);
+      }
+    }, POLL_INTERVAL);
+
+    return () => clearInterval(interval);
+  }, [isEditing]);
+
+  // ─── Navigation ──────────────────────────────────────────────────────────
+  const flipTo = useCallback(
+    (newIndex: number, direction: "left" | "right") => {
+      if (animTimeout.current) clearTimeout(animTimeout.current);
+      setAnimClass(direction === "left" ? "page-exit-left" : "page-exit-right");
+      animTimeout.current = setTimeout(() => {
+        setCurrentIndex(newIndex);
+        setAnimClass("page-enter");
+        setIsEditing(false);
+      }, 280);
+    },
+    []
+  );
+
+  const prevPage = useCallback(() => {
+    if (pages && currentIndex > 0) flipTo(currentIndex - 1, "right");
+  }, [pages, currentIndex, flipTo]);
+
+  const nextPage = useCallback(() => {
+    if (pages && currentIndex < pages.length - 1) flipTo(currentIndex + 1, "left");
+  }, [pages, currentIndex, flipTo]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (isEditing) return;
+      if (e.key === "ArrowLeft") prevPage();
+      if (e.key === "ArrowRight") nextPage();
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [prevPage, nextPage, isEditing]);
+
+  // ─── Page mutations ──────────────────────────────────────────────────────
+  const debouncedSave = useCallback(
+    (newPages: PageData[]) => {
+      if (saveTimeout.current) clearTimeout(saveTimeout.current);
+      setSaveStatus("saving");
+      saveTimeout.current = setTimeout(async () => {
+        const ok = await savePagesToDB(newPages);
+        setSaveStatus(ok ? "saved" : "error");
+        if (ok) {
+          serverVersionRef.current = Date.now();
+        }
+        setTimeout(() => setSaveStatus("idle"), 1500);
+      }, 800);
+    },
+    []
+  );
+
+  const updatePage = (updated: PageData) => {
+    if (!pages) return;
+    const newPages = [...pages];
+    newPages[currentIndex] = updated;
+    setPages(newPages);
+    localVersionRef.current = Date.now();
+    debouncedSave(newPages);
+  };
+
+  const addPage = () => {
+    if (!pages) return;
+    const newPages = [...pages];
+    newPages.splice(currentIndex + 1, 0, { type: "text", title: "Untitled", content: "" });
+    setPages(newPages);
+    localVersionRef.current = Date.now();
+    savePagesToDB(newPages).then(() => {
+      serverVersionRef.current = Date.now();
+    });
+    flipTo(currentIndex + 1, "left");
+  };
+
+  const deletePage = () => {
+    if (!pages) return;
+    if (pages[currentIndex].type !== "text") return;
+    const textPages = pages.filter((p) => p.type === "text");
+    if (textPages.length <= 1) return;
+    const newPages = pages.filter((_, i) => i !== currentIndex);
+    const newIndex = Math.min(currentIndex, newPages.length - 1);
+    setPages(newPages);
+    setCurrentIndex(newIndex);
+    setAnimClass("page-enter");
+    localVersionRef.current = Date.now();
+    savePagesToDB(newPages).then(() => {
+      serverVersionRef.current = Date.now();
+    });
+  };
+
+  // ─── Derived ─────────────────────────────────────────────────────────────
+  if (!pages) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-surface-container-low">
+        <p className="font-['Newsreader'] italic text-lg opacity-40 animate-pulse">
+          Opening kaviKitaab…
+        </p>
+      </div>
+    );
+  }
+
+  const currentPage = pages[currentIndex];
+  const totalTextPages = pages.filter((p) => p.type === "text").length;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="h-screen w-screen overflow-hidden flex flex-col bg-surface-container-low text-on-surface select-none">
+      {/* ─── Header ─────────────────────────────────────────────────────── */}
+      <header className="bg-surface relative z-50 shrink-0 border-b border-black/5">
+        <div className="flex justify-between items-center px-6 md:px-12 py-3 max-w-full mx-auto">
+          <div className="flex items-center gap-3">
+            <h1 className="font-['Newsreader'] font-bold text-lg tracking-tighter">
+              KAVIKITAAB
+            </h1>
+            <span className="text-[10px] uppercase tracking-[0.3em] opacity-30 font-['Newsreader'] hidden sm:inline">
+              by Bushi
+            </span>
+          </div>
+
+          <div className="flex items-center gap-5">
+            {/* Live indicator */}
+            <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.15em] font-['Newsreader']">
+              <span
+                className={`inline-block w-1.5 h-1.5 rounded-full ${
+                  liveIndicator ? "bg-green-500 animate-pulse" : "bg-red-400"
+                }`}
+              />
+              <span className="opacity-40 hidden sm:inline">Live</span>
+            </span>
+
+            {/* Save status */}
+            <span
+              className={`text-[10px] uppercase tracking-[0.2em] font-['Newsreader'] transition-opacity ${
+                saveStatus === "saved"
+                  ? "save-pulse opacity-70"
+                  : saveStatus === "saving"
+                  ? "opacity-40"
+                  : saveStatus === "error"
+                  ? "opacity-80 text-error"
+                  : "opacity-0"
+              }`}
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              {saveStatus === "saving"
+                ? "Saving…"
+                : saveStatus === "saved"
+                ? "✓ Saved"
+                : saveStatus === "error"
+                ? "✗ Error"
+                : ""}
+            </span>
+
+            {/* Page counter */}
+            <span className="font-['Newsreader'] text-xs opacity-50 tracking-widest">
+              {currentIndex + 1} / {pages.length}
+            </span>
+
+            <span className="material-symbols-outlined cursor-pointer opacity-40 hover:opacity-100 transition-opacity text-xl">
+              bookmark
+            </span>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </header>
+
+      {/* ─── Book Area ──────────────────────────────────────────────────── */}
+      <main className="flex-1 flex items-center justify-center p-4 md:p-8 page-wrapper overflow-hidden">
+        <div className={`w-full max-w-3xl h-full flex items-center justify-center ${animClass}`}>
+          {/* ── Cover ─────────────────────────────────────────────────── */}
+          {currentPage.type === "cover" && (
+            <div className="relative w-full max-w-lg aspect-[3/4] bg-surface-container paper-depth border-l-[12px] border-primary-container flex flex-col items-center justify-center p-12 text-center transition-shadow hover:shadow-2xl">
+              <div className="absolute inset-0 bg-gradient-to-tr from-black/5 to-transparent pointer-events-none rounded-sm" />
+              <div className="absolute top-6 left-6 w-6 h-6 border-t border-l border-black/10" />
+              <div className="absolute top-6 right-6 w-6 h-6 border-t border-r border-black/10" />
+              <div className="absolute bottom-6 left-6 w-6 h-6 border-b border-l border-black/10" />
+              <div className="absolute bottom-6 right-6 w-6 h-6 border-b border-r border-black/10" />
+
+              <p className="font-['Newsreader'] italic text-base tracking-widest opacity-40 mb-10">
+                A Collection
+              </p>
+              <h2 className="text-5xl md:text-7xl font-['Newsreader'] font-light leading-tight tracking-tighter text-primary mb-8">
+                kaviKitaab
+              </h2>
+              <div className="w-16 h-[1px] bg-primary/15 mb-8" />
+              <p className="font-['Newsreader'] uppercase tracking-[0.5em] text-[11px] opacity-50">
+                By Bushi
+              </p>
+              <p className="font-['Newsreader'] italic text-xs opacity-20 mt-16">
+                Use ← → arrow keys or buttons below to turn pages
+              </p>
+            </div>
+          )}
+
+          {/* ── Text Page ─────────────────────────────────────────────── */}
+          {currentPage.type === "text" && (
+            <div className="relative w-full h-full max-h-[80vh] bg-surface-container-lowest paper-depth border-l-[4px] border-black/5 spine-shadow flex flex-col transition-shadow hover:shadow-xl">
+              {/* Page header */}
+              <div className="flex items-center justify-between px-8 md:px-14 pt-6 pb-4 border-b border-black/5 shrink-0">
+                <input
+                  type="text"
+                  value={currentPage.title}
+                  onChange={(e) =>
+                    updatePage({ ...currentPage, title: e.target.value })
+                  }
+                  onFocus={() => setIsEditing(true)}
+                  onBlur={() => setIsEditing(false)}
+                  className="bg-transparent border-none p-0 font-['Newsreader'] text-xs uppercase tracking-[0.3em] opacity-40 focus:opacity-80 transition-opacity outline-none w-full max-w-[200px] select-text"
+                  placeholder="Page title..."
+                />
+                <span className="opacity-20 text-[10px] font-['Newsreader'] tracking-widest shrink-0">
+                  KAVIKITAAB
+                </span>
+              </div>
+
+              {/* Editable content area */}
+              <div className="flex-1 px-8 md:px-14 py-6 overflow-hidden">
+                <textarea
+                  value={currentPage.content}
+                  onChange={(e) =>
+                    updatePage({ ...currentPage, content: e.target.value })
+                  }
+                  onFocus={() => setIsEditing(true)}
+                  onBlur={() => setIsEditing(false)}
+                  className="w-full h-full bg-transparent border-none p-0 font-['Newsreader'] text-lg md:text-xl leading-[2] resize-none outline-none select-text"
+                  placeholder="Begin writing here...&#10;&#10;Every great poem starts with a single word."
+                />
+              </div>
+
+              {/* Page footer */}
+              <div className="flex items-center justify-between px-8 md:px-14 py-4 border-t border-black/5 shrink-0">
+                <span className="opacity-15 text-[10px] font-['Newsreader']">
+                  {currentPage.content.length} characters
+                </span>
+                <span className="opacity-15 text-[10px] font-['Newsreader']">
+                  Page {currentIndex}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* ── Back Cover ────────────────────────────────────────────── */}
+          {currentPage.type === "back_cover" && (
+            <div className="relative w-full max-w-lg aspect-[3/4] bg-surface-container-high border-r-[12px] border-primary-container paper-depth flex flex-col items-center justify-center text-center transition-shadow hover:shadow-2xl">
+              <div className="absolute top-6 left-6 w-6 h-6 border-t border-l border-black/10" />
+              <div className="absolute top-6 right-6 w-6 h-6 border-t border-r border-black/10" />
+              <div className="absolute bottom-6 left-6 w-6 h-6 border-b border-l border-black/10" />
+              <div className="absolute bottom-6 right-6 w-6 h-6 border-b border-r border-black/10" />
+
+              <div className="space-y-6 opacity-20 flex flex-col items-center">
+                <div className="w-14 h-14 border-2 border-primary flex items-center justify-center font-bold text-xl tracking-tighter">
+                  KB
+                </div>
+                <div className="w-8 h-[1px] bg-primary/30" />
+                <p className="text-[10px] uppercase tracking-[0.5em] leading-loose">
+                  Published by Bushi
+                  <br />
+                  All Rights Reserved © {new Date().getFullYear()}
+                </p>
+                <p className="text-[10px] italic font-['Newsreader'] tracking-wider">
+                  {totalTextPages} {totalTextPages === 1 ? "page" : "pages"} in this volume
+                </p>
+              </div>
+              <div className="absolute bottom-24 w-48 h-[1px] bg-primary/10" />
+              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 opacity-40 text-xs italic font-['Newsreader']">
+                Finis
+              </div>
+            </div>
+          )}
         </div>
       </main>
+
+      {/* ─── Bottom Navigation ──────────────────────────────────────────── */}
+      <footer className="h-16 shrink-0 bg-surface border-t border-black/5 flex items-center justify-between px-4 md:px-16">
+        <button
+          onClick={prevPage}
+          disabled={currentIndex === 0}
+          className={`flex items-center gap-2 font-['Newsreader'] uppercase tracking-[0.2em] text-xs transition-all ${
+            currentIndex === 0
+              ? "opacity-15 cursor-not-allowed"
+              : "opacity-60 hover:opacity-100 hover:-translate-x-1"
+          }`}
+        >
+          <span className="material-symbols-outlined text-base">arrow_back_ios</span>
+          <span className="hidden sm:inline">Previous</span>
+        </button>
+
+        <div className="flex items-center gap-4">
+          {currentPage.type === "text" && (
+            <>
+              <button
+                onClick={addPage}
+                className="tooltip-wrapper flex items-center gap-1 text-xs opacity-30 hover:opacity-80 transition-opacity font-['Newsreader'] uppercase tracking-[0.1em]"
+                data-tooltip="Insert page after"
+              >
+                <span className="material-symbols-outlined text-base">add</span>
+              </button>
+              <button
+                onClick={deletePage}
+                disabled={totalTextPages <= 1}
+                className={`tooltip-wrapper flex items-center gap-1 text-xs transition-opacity font-['Newsreader'] uppercase tracking-[0.1em] ${
+                  totalTextPages <= 1
+                    ? "opacity-10 cursor-not-allowed"
+                    : "opacity-30 hover:opacity-80"
+                }`}
+                data-tooltip="Delete this page"
+              >
+                <span className="material-symbols-outlined text-base">delete</span>
+              </button>
+            </>
+          )}
+        </div>
+
+        <button
+          onClick={nextPage}
+          disabled={currentIndex === pages.length - 1}
+          className={`flex items-center gap-2 font-['Newsreader'] uppercase tracking-[0.2em] text-xs transition-all ${
+            currentIndex === pages.length - 1
+              ? "opacity-15 cursor-not-allowed"
+              : "opacity-60 hover:opacity-100 hover:translate-x-1"
+          }`}
+        >
+          <span className="hidden sm:inline">Next</span>
+          <span className="material-symbols-outlined text-base">arrow_forward_ios</span>
+        </button>
+      </footer>
     </div>
   );
 }
