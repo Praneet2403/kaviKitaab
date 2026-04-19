@@ -179,9 +179,9 @@ export default function Home() {
     <div className="h-screen w-screen overflow-hidden flex flex-col bg-surface-container-low text-on-surface select-none">
       {/* ─── Header ─────────────────────────────────────────────────────── */}
       <header className="bg-surface relative z-50 shrink-0 border-b border-black/5">
-        <div className="flex justify-between items-center px-6 md:px-12 py-3 max-w-full mx-auto">
+        <div className="flex justify-between items-center px-4 sm:px-6 md:px-12 py-2 sm:py-3 max-w-full mx-auto">
           <div className="flex items-center gap-3">
-            <h1 className="font-['Newsreader'] font-bold text-lg tracking-tighter">
+            <h1 className="font-['Newsreader'] font-bold text-base sm:text-lg tracking-tighter">
               KAVIKITAAB
             </h1>
             <span className="text-[10px] uppercase tracking-[0.3em] opacity-30 font-['Newsreader'] hidden sm:inline">
@@ -189,7 +189,7 @@ export default function Home() {
             </span>
           </div>
 
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-2 sm:gap-5">
             {/* Live indicator */}
             <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.15em] font-['Newsreader']">
               <span
@@ -234,38 +234,38 @@ export default function Home() {
       </header>
 
       {/* ─── Book Area ──────────────────────────────────────────────────── */}
-      <main className="flex-1 flex items-center justify-center p-4 md:p-8 page-wrapper overflow-hidden">
+      <main className="flex-1 flex items-center justify-center p-2 sm:p-4 md:p-8 page-wrapper overflow-hidden">
         <div className={`w-full max-w-3xl h-full flex items-center justify-center ${animClass}`}>
           {/* ── Cover ─────────────────────────────────────────────────── */}
           {currentPage.type === "cover" && (
-            <div className="relative w-full max-w-lg aspect-[3/4] bg-surface-container paper-depth border-l-[12px] border-primary-container flex flex-col items-center justify-center p-12 text-center transition-shadow hover:shadow-2xl">
+            <div className="relative w-full max-w-lg h-full max-h-[85vh] sm:max-h-none sm:aspect-[3/4] bg-surface-container paper-depth border-l-[8px] sm:border-l-[12px] border-primary-container flex flex-col items-center justify-center p-6 sm:p-12 text-center transition-shadow hover:shadow-2xl">
               <div className="absolute inset-0 bg-gradient-to-tr from-black/5 to-transparent pointer-events-none rounded-sm" />
-              <div className="absolute top-6 left-6 w-6 h-6 border-t border-l border-black/10" />
-              <div className="absolute top-6 right-6 w-6 h-6 border-t border-r border-black/10" />
-              <div className="absolute bottom-6 left-6 w-6 h-6 border-b border-l border-black/10" />
-              <div className="absolute bottom-6 right-6 w-6 h-6 border-b border-r border-black/10" />
+              <div className="absolute top-4 left-4 sm:top-6 sm:left-6 w-4 h-4 sm:w-6 sm:h-6 border-t border-l border-black/10" />
+              <div className="absolute top-4 right-4 sm:top-6 sm:right-6 w-4 h-4 sm:w-6 sm:h-6 border-t border-r border-black/10" />
+              <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 w-4 h-4 sm:w-6 sm:h-6 border-b border-l border-black/10" />
+              <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 w-4 h-4 sm:w-6 sm:h-6 border-b border-r border-black/10" />
 
-              <p className="font-['Newsreader'] italic text-base tracking-widest opacity-40 mb-10">
+              <p className="font-['Newsreader'] italic text-sm sm:text-base tracking-widest opacity-40 mb-6 sm:mb-10">
                 A Collection
               </p>
-              <h2 className="text-5xl md:text-7xl font-['Newsreader'] font-light leading-tight tracking-tighter text-primary mb-8">
+              <h2 className="text-4xl sm:text-5xl md:text-7xl font-['Newsreader'] font-light leading-tight tracking-tighter text-primary mb-5 sm:mb-8">
                 kaviKitaab
               </h2>
-              <div className="w-16 h-[1px] bg-primary/15 mb-8" />
-              <p className="font-['Newsreader'] uppercase tracking-[0.5em] text-[11px] opacity-50">
+              <div className="w-12 sm:w-16 h-[1px] bg-primary/15 mb-5 sm:mb-8" />
+              <p className="font-['Newsreader'] uppercase tracking-[0.4em] sm:tracking-[0.5em] text-[10px] sm:text-[11px] opacity-50">
                 By Bushi
               </p>
-              <p className="font-['Newsreader'] italic text-xs opacity-20 mt-16">
-                Use ← → arrow keys or buttons below to turn pages
+              <p className="font-['Newsreader'] italic text-[10px] sm:text-xs opacity-20 mt-8 sm:mt-16">
+                Use ← → or buttons below to turn pages
               </p>
             </div>
           )}
 
           {/* ── Text Page ─────────────────────────────────────────────── */}
           {currentPage.type === "text" && (
-            <div className="relative w-full h-full max-h-[80vh] bg-surface-container-lowest paper-depth border-l-[4px] border-black/5 spine-shadow flex flex-col transition-shadow hover:shadow-xl">
+            <div className="relative w-full h-full max-h-[85vh] bg-surface-container-lowest paper-depth border-l-[4px] border-black/5 spine-shadow flex flex-col transition-shadow hover:shadow-xl">
               {/* Page header */}
-              <div className="flex items-center justify-between px-8 md:px-14 pt-6 pb-4 border-b border-black/5 shrink-0">
+              <div className="flex items-center justify-between px-4 sm:px-8 md:px-14 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b border-black/5 shrink-0">
                 <input
                   type="text"
                   value={currentPage.title}
@@ -283,7 +283,7 @@ export default function Home() {
               </div>
 
               {/* Editable content area */}
-              <div className="flex-1 px-8 md:px-14 py-6 overflow-hidden">
+              <div className="flex-1 px-4 sm:px-8 md:px-14 py-4 sm:py-6 overflow-hidden">
                 <textarea
                   value={currentPage.content}
                   onChange={(e) =>
@@ -291,13 +291,13 @@ export default function Home() {
                   }
                   onFocus={() => setIsEditing(true)}
                   onBlur={() => setIsEditing(false)}
-                  className="w-full h-full bg-transparent border-none p-0 font-['Newsreader'] text-lg md:text-xl leading-[2] resize-none outline-none select-text"
+                  className="w-full h-full bg-transparent border-none p-0 font-['Newsreader'] text-base sm:text-lg md:text-xl leading-[1.8] sm:leading-[2] resize-none outline-none select-text"
                   placeholder="Begin writing here...&#10;&#10;Every great poem starts with a single word."
                 />
               </div>
 
               {/* Page footer */}
-              <div className="flex items-center justify-between px-8 md:px-14 py-4 border-t border-black/5 shrink-0">
+              <div className="flex items-center justify-between px-4 sm:px-8 md:px-14 py-3 sm:py-4 border-t border-black/5 shrink-0">
                 <span className="opacity-15 text-[10px] font-['Newsreader']">
                   {currentPage.content.length} characters
                 </span>
@@ -310,28 +310,28 @@ export default function Home() {
 
           {/* ── Back Cover ────────────────────────────────────────────── */}
           {currentPage.type === "back_cover" && (
-            <div className="relative w-full max-w-lg aspect-[3/4] bg-surface-container-high border-r-[12px] border-primary-container paper-depth flex flex-col items-center justify-center text-center transition-shadow hover:shadow-2xl">
-              <div className="absolute top-6 left-6 w-6 h-6 border-t border-l border-black/10" />
-              <div className="absolute top-6 right-6 w-6 h-6 border-t border-r border-black/10" />
-              <div className="absolute bottom-6 left-6 w-6 h-6 border-b border-l border-black/10" />
-              <div className="absolute bottom-6 right-6 w-6 h-6 border-b border-r border-black/10" />
+            <div className="relative w-full max-w-lg h-full max-h-[85vh] sm:max-h-none sm:aspect-[3/4] bg-surface-container-high border-r-[8px] sm:border-r-[12px] border-primary-container paper-depth flex flex-col items-center justify-center text-center transition-shadow hover:shadow-2xl p-6 sm:p-0">
+              <div className="absolute top-4 left-4 sm:top-6 sm:left-6 w-4 h-4 sm:w-6 sm:h-6 border-t border-l border-black/10" />
+              <div className="absolute top-4 right-4 sm:top-6 sm:right-6 w-4 h-4 sm:w-6 sm:h-6 border-t border-r border-black/10" />
+              <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 w-4 h-4 sm:w-6 sm:h-6 border-b border-l border-black/10" />
+              <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 w-4 h-4 sm:w-6 sm:h-6 border-b border-r border-black/10" />
 
-              <div className="space-y-6 opacity-20 flex flex-col items-center">
-                <div className="w-14 h-14 border-2 border-primary flex items-center justify-center font-bold text-xl tracking-tighter">
+              <div className="space-y-4 sm:space-y-6 opacity-20 flex flex-col items-center">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 border-2 border-primary flex items-center justify-center font-bold text-lg sm:text-xl tracking-tighter">
                   KB
                 </div>
                 <div className="w-8 h-[1px] bg-primary/30" />
-                <p className="text-[10px] uppercase tracking-[0.5em] leading-loose">
+                <p className="text-[9px] sm:text-[10px] uppercase tracking-[0.4em] sm:tracking-[0.5em] leading-loose">
                   Published by Bushi
                   <br />
                   All Rights Reserved © {new Date().getFullYear()}
                 </p>
-                <p className="text-[10px] italic font-['Newsreader'] tracking-wider">
+                <p className="text-[9px] sm:text-[10px] italic font-['Newsreader'] tracking-wider">
                   {totalTextPages} {totalTextPages === 1 ? "page" : "pages"} in this volume
                 </p>
               </div>
-              <div className="absolute bottom-24 w-48 h-[1px] bg-primary/10" />
-              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 opacity-40 text-xs italic font-['Newsreader']">
+              <div className="absolute bottom-16 sm:bottom-24 w-32 sm:w-48 h-[1px] bg-primary/10" />
+              <div className="absolute bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 opacity-40 text-[10px] sm:text-xs italic font-['Newsreader']">
                 Finis
               </div>
             </div>
@@ -340,11 +340,11 @@ export default function Home() {
       </main>
 
       {/* ─── Bottom Navigation ──────────────────────────────────────────── */}
-      <footer className="h-16 shrink-0 bg-surface border-t border-black/5 flex items-center justify-between px-4 md:px-16">
+      <footer className="h-12 sm:h-16 shrink-0 bg-surface border-t border-black/5 flex items-center justify-between px-3 sm:px-4 md:px-16">
         <button
           onClick={prevPage}
           disabled={currentIndex === 0}
-          className={`flex items-center gap-2 font-['Newsreader'] uppercase tracking-[0.2em] text-xs transition-all ${
+          className={`flex items-center gap-1 sm:gap-2 font-['Newsreader'] uppercase tracking-[0.15em] sm:tracking-[0.2em] text-[10px] sm:text-xs transition-all min-h-[44px] min-w-[44px] justify-center ${
             currentIndex === 0
               ? "opacity-15 cursor-not-allowed"
               : "opacity-60 hover:opacity-100 hover:-translate-x-1"
@@ -354,12 +354,12 @@ export default function Home() {
           <span className="hidden sm:inline">Previous</span>
         </button>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           {currentPage.type === "text" && (
             <>
               <button
                 onClick={addPage}
-                className="tooltip-wrapper flex items-center gap-1 text-xs opacity-30 hover:opacity-80 transition-opacity font-['Newsreader'] uppercase tracking-[0.1em]"
+                className="tooltip-wrapper flex items-center gap-1 text-xs opacity-30 hover:opacity-80 transition-opacity font-['Newsreader'] uppercase tracking-[0.1em] min-h-[44px] min-w-[44px] justify-center"
                 data-tooltip="Insert page after"
               >
                 <span className="material-symbols-outlined text-base">add</span>
@@ -367,7 +367,7 @@ export default function Home() {
               <button
                 onClick={deletePage}
                 disabled={totalTextPages <= 1}
-                className={`tooltip-wrapper flex items-center gap-1 text-xs transition-opacity font-['Newsreader'] uppercase tracking-[0.1em] ${
+                className={`tooltip-wrapper flex items-center gap-1 text-xs transition-opacity font-['Newsreader'] uppercase tracking-[0.1em] min-h-[44px] min-w-[44px] justify-center ${
                   totalTextPages <= 1
                     ? "opacity-10 cursor-not-allowed"
                     : "opacity-30 hover:opacity-80"
@@ -383,7 +383,7 @@ export default function Home() {
         <button
           onClick={nextPage}
           disabled={currentIndex === pages.length - 1}
-          className={`flex items-center gap-2 font-['Newsreader'] uppercase tracking-[0.2em] text-xs transition-all ${
+          className={`flex items-center gap-1 sm:gap-2 font-['Newsreader'] uppercase tracking-[0.15em] sm:tracking-[0.2em] text-[10px] sm:text-xs transition-all min-h-[44px] min-w-[44px] justify-center ${
             currentIndex === pages.length - 1
               ? "opacity-15 cursor-not-allowed"
               : "opacity-60 hover:opacity-100 hover:translate-x-1"

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Newsreader } from "next/font/google";
 import "./globals.css";
 
@@ -8,6 +8,13 @@ const newsreader = Newsreader({
   display: "swap",
   variable: "--font-newsreader",
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
 
 export const metadata: Metadata = {
   title: "kaviKitaab | By Bushi",
